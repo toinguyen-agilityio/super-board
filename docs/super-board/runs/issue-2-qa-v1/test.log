@@ -1,0 +1,13 @@
+
+> thiep-cuoi@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.3 D:/home/study/AI/toi-nguyen/super-board/.claude/worktrees/issue-2-qa
+
+
+ Test Files  4 passed (4)
+      Tests  15 passed (15)
+   Start at  11:48:51
+   Duration  1.31s (environment 74%, import 11%, tests 9%, transform 4%, worker 1%)
+
