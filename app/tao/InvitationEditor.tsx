@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ChangeEvent, type CSSProperties } from "react";
+import { backgroundError, fonts, palettes, type Font, type Palette } from "@/lib/customise";
 import type { Template } from "@/lib/templates";
 
 const MESSAGE_MAX = 300;
@@ -30,8 +31,38 @@ export default function InvitationEditor({
   const [details, setDetails] = useState<Details>(empty);
   const [touched, setTouched] = useState<Partial<Record<keyof Details, boolean>>>({});
 
+  const [palette, setPalette] = useState<Palette | null>(null);
+  const [font, setFont] = useState<Font | null>(null);
+  const [background, setBackground] = useState<string | null>(null);
+  const [backgroundMessage, setBackgroundMessage] = useState<string | null>(null);
+
+  // Revoke the old object URL when the background changes or the editor unmounts.
+  useEffect(() => () => {
+    if (background) URL.revokeObjectURL(background);
+  }, [background]);
+
   const set = (name: keyof Details, value: string) =>
     setDetails((d) => ({ ...d, [name]: value }));
+
+  const pickBackground = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const error = backgroundError(file);
+    setBackgroundMessage(error);
+    if (!error) setBackground(URL.createObjectURL(file));
+  };
+
+  const previewStyle = {
+    color: palette?.text,
+    "--accent": palette?.accent,
+    fontFamily: font ? `var(${font.variable}), sans-serif` : undefined,
+    backgroundImage: background
+      ? `linear-gradient(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.7)), url("${background}")`
+      : undefined,
+    backgroundSize: background ? "cover" : undefined,
+    backgroundPosition: background ? "center" : undefined,
+  } as CSSProperties;
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -80,16 +111,81 @@ export default function InvitationEditor({
             Còn {MESSAGE_MAX - details.message.length} ký tự
           </p>
         </div>
+
+        <fieldset className="flex flex-col gap-4 rounded border border-neutral-200 p-4">
+          <legend className="px-1 font-medium">Tuỳ chỉnh thiệp</legend>
+          <div role="radiogroup" aria-label="Bảng màu" className="flex flex-wrap gap-2">
+            {palettes.map((p) => (
+              <label key={p.id} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+                <input
+                  type="radio"
+                  name="palette"
+                  checked={palette?.id === p.id}
+                  onChange={() => setPalette(p)}
+                />
+                <span aria-hidden="true" className="size-4 rounded-full" style={{ background: p.accent }} />
+                {p.name}
+              </label>
+            ))}
+          </div>
+          <div role="radiogroup" aria-label="Phông chữ" className="flex flex-wrap gap-2">
+            {fonts.map((f) => (
+              <label
+                key={f.id}
+                className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900"
+                style={{ fontFamily: `var(${f.variable}), sans-serif` }}
+              >
+                <input
+                  type="radio"
+                  name="font"
+                  checked={font?.id === f.id}
+                  onChange={() => setFont(f)}
+                />
+                {f.name}
+              </label>
+            ))}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="f-background" className="font-medium">
+              Ảnh nền
+            </label>
+            <input
+              id="f-background"
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={pickBackground}
+              aria-describedby={backgroundMessage ? "f-background-error" : undefined}
+              className="text-sm"
+            />
+            {backgroundMessage && (
+              <p id="f-background-error" role="alert" className="text-sm text-red-600">
+                {backgroundMessage}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={!background}
+              onClick={() => {
+                setBackground(null);
+                setBackgroundMessage(null);
+              }}
+              className="self-start rounded border border-neutral-300 px-3 py-1 text-sm disabled:opacity-50"
+            >
+              Xoá ảnh nền
+            </button>
+          </div>
+        </fieldset>
       </form>
 
       <section
         aria-label="Xem trước thiệp"
         data-template={template.id}
+        style={previewStyle}
         className="flex flex-col items-center gap-3 rounded-lg border border-neutral-200 p-8 text-center"
       >
         <p className="text-sm uppercase tracking-wide text-neutral-500">Mẫu: {template.name}</p>
         <p className="text-sm">Trân trọng báo tin lễ thành hôn của</p>
-        <p className="text-2xl font-semibold">
+        <p className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
           <span>{details.bride || "Cô dâu"}</span>
           <span aria-hidden="true"> &amp; </span>
           <span>{details.groom || "Chú rể"}</span>

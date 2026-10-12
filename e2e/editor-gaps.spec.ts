@@ -17,7 +17,8 @@ test("every field reaches the preview in a real browser", async ({ page }) => {
   for (const text of ["Lan", "Minh", "18:00 · 20/12/2026", "Nhà hàng Sen", "Trân trọng kính mời"]) {
     await expect(preview(page)).toContainText(text);
   }
-  await expect(page.getByRole("button")).toHaveCount(0);
+  // Live preview, no submit step (the customise panel's buttons are type="button").
+  await expect(page.locator('button[type="submit"], button:not([type]), input[type="submit"]')).toHaveCount(0);
 });
 
 test("Lời mời stops at 300 characters when typed", async ({ page }) => {
