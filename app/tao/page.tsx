@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { findTemplate } from "@/lib/templates";
+import InvitationEditor from "./InvitationEditor";
 
 export default function TaoPage({ searchParams }: PageProps<"/tao">) {
   return (
@@ -18,5 +19,5 @@ async function ChosenTemplate({
 }: Pick<PageProps<"/tao">, "searchParams">) {
   const template = findTemplate((await searchParams).mau);
   if (!template) redirect("/");
-  return <p className="mt-2">Mẫu: {template.name}</p>;
+  return <InvitationEditor template={{ id: template.id, name: template.name }} />;
 }
