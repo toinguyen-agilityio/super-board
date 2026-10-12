@@ -126,7 +126,8 @@ export default function InvitationEditor({
     backgroundSize: background ? "cover" : undefined,
     backgroundPosition: background ? "center" : undefined,
   } as CSSProperties;
-  const previewClass = "flex flex-col items-center gap-3 rounded-lg border border-neutral-200 p-8 text-center";
+  // bg-white: the preview owns its white card, so the PNG is opaque rather than transparent.
+  const previewClass = "flex flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-white p-8 text-center";
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
