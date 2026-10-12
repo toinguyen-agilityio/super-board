@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } from "react";
+import { toPng } from "html-to-image";
 import { backgroundError, fonts, palettes, type Font, type Palette } from "@/lib/customise";
+import { invitationFileName } from "@/lib/download";
 import type { Template } from "@/lib/templates";
 
 const MESSAGE_MAX = 300;
+const PNG_MIN_WIDTH = 1080;
 
 const fields = [
   { name: "bride", label: "Tên cô dâu", type: "text", error: "Vui lòng nhập tên cô dâu" },
@@ -36,6 +39,31 @@ export default function InvitationEditor({
   const [background, setBackground] = useState<string | null>(null);
   const [backgroundMessage, setBackgroundMessage] = useState<string | null>(null);
 
+  const [fullScreen, setFullScreen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const previewRef = useRef<HTMLElement>(null);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const ready =
+    fields.every((f) => details[f.name].trim()) && formatWhen(details.when) !== "";
+
+  // Full screen: focus the close button, Esc closes, focus goes back to "Xem trước".
+  useEffect(() => {
+    if (!fullScreen) return;
+    closeButtonRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullScreen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const opener = openButtonRef.current;
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, [fullScreen]);
+
   // Revoke the old object URL when the background changes or the editor unmounts.
   useEffect(() => () => {
     if (background) URL.revokeObjectURL(background);
@@ -53,6 +81,41 @@ export default function InvitationEditor({
     if (!error) setBackground(URL.createObjectURL(file));
   };
 
+  // Exports the on-screen preview; an integer pixel ratio keeps the PNG at least 1080 px wide.
+  const savePng = async () => {
+    const node = previewRef.current;
+    if (!node) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const pixelRatio = Math.max(1, Math.ceil(PNG_MIN_WIDTH / (node.offsetWidth || PNG_MIN_WIDTH)));
+      const dataUrl = await toPng(node, { pixelRatio });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = invitationFileName(details.bride, details.groom);
+      a.click();
+    } catch {
+      setSaveError("Không tạo được ảnh thiệp, vui lòng thử lại");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const previewContent = (
+    <>
+      <p className="text-sm uppercase tracking-wide text-neutral-500">Mẫu: {template.name}</p>
+      <p className="text-sm">Trân trọng báo tin lễ thành hôn của</p>
+      <p className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
+        <span>{details.bride || "Cô dâu"}</span>
+        <span aria-hidden="true"> &amp; </span>
+        <span>{details.groom || "Chú rể"}</span>
+      </p>
+      <p>{formatWhen(details.when) || "Ngày giờ"}</p>
+      <p>{details.venue || "Địa điểm"}</p>
+      {details.message && <p className="whitespace-pre-line italic">{details.message}</p>}
+    </>
+  );
+
   const previewStyle = {
     color: palette?.text,
     "--accent": palette?.accent,
@@ -63,6 +126,7 @@ export default function InvitationEditor({
     backgroundSize: background ? "cover" : undefined,
     backgroundPosition: background ? "center" : undefined,
   } as CSSProperties;
+  const previewClass = "flex flex-col items-center gap-3 rounded-lg border border-neutral-200 p-8 text-center";
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -177,23 +241,67 @@ export default function InvitationEditor({
         </fieldset>
       </form>
 
-      <section
-        aria-label="Xem trước thiệp"
-        data-template={template.id}
-        style={previewStyle}
-        className="flex flex-col items-center gap-3 rounded-lg border border-neutral-200 p-8 text-center"
-      >
-        <p className="text-sm uppercase tracking-wide text-neutral-500">Mẫu: {template.name}</p>
-        <p className="text-sm">Trân trọng báo tin lễ thành hôn của</p>
-        <p className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
-          <span>{details.bride || "Cô dâu"}</span>
-          <span aria-hidden="true"> &amp; </span>
-          <span>{details.groom || "Chú rể"}</span>
-        </p>
-        <p>{formatWhen(details.when) || "Ngày giờ"}</p>
-        <p>{details.venue || "Địa điểm"}</p>
-        {details.message && <p className="whitespace-pre-line italic">{details.message}</p>}
-      </section>
+      <div className="flex flex-col gap-3">
+        <section
+          ref={previewRef}
+          aria-label="Xem trước thiệp"
+          data-template={template.id}
+          style={previewStyle}
+          className={previewClass}
+        >
+          {previewContent}
+        </section>
+        <div className="flex flex-wrap gap-2">
+          <button
+            ref={openButtonRef}
+            type="button"
+            onClick={() => setFullScreen(true)}
+            className="rounded border border-neutral-300 px-4 py-2"
+          >
+            Xem trước
+          </button>
+          <button
+            type="button"
+            disabled={!ready || saving}
+            onClick={savePng}
+            aria-describedby={ready ? undefined : "download-hint"}
+            className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
+          >
+            Tải về
+          </button>
+        </div>
+        {!ready && (
+          <p id="download-hint" className="text-sm text-neutral-600">
+            Hãy điền đủ tên cô dâu, tên chú rể, ngày giờ và địa điểm để tải thiệp
+          </p>
+        )}
+        {saveError && (
+          <p role="alert" className="text-sm text-red-600">
+            {saveError}
+          </p>
+        )}
+      </div>
+
+      {fullScreen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Xem trước toàn màn hình"
+          className="fixed inset-0 z-50 flex flex-col items-center gap-4 overflow-auto bg-white p-6"
+        >
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={() => setFullScreen(false)}
+            className="self-end rounded border border-neutral-300 px-4 py-2"
+          >
+            Đóng
+          </button>
+          <div style={previewStyle} className={`${previewClass} my-auto w-full max-w-3xl text-lg`}>
+            {previewContent}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
