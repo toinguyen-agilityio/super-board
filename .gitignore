@@ -7,3 +7,14 @@
 .claude/super-board/migrations/
 .claude/super-board/upgrade.json
 .claude/settings.json.bak-*
+
+# app
+/node_modules
+/.next/
+/out/
+/coverage
+/playwright-report/
+/test-results/
+*.tsbuildinfo
+next-env.d.ts
+.env*
