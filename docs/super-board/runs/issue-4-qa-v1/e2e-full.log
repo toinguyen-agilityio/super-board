@@ -1,0 +1,64 @@
+
+Running 29 tests using 6 workers
+
+[1/29] e2e\customise-gaps.spec.ts:21:5 › a PNG at exactly 5 MB becomes the background; 5 MB + 1 and a GIF are refused in Vietnamese
+[2/29] e2e\editor-gaps.spec.ts:10:5 › every field reaches the preview in a real browser
+[3/29] e2e\customise.spec.ts:11:7 › Be Vietnam Pro renders Vietnamese diacritics from its own web font
+[4/29] e2e\editor.spec.ts:12:5 › typing updates the preview live
+[5/29] e2e\download-gaps.spec.ts:82:5 › the PNG matches the preview: text, palette, font and uploaded background
+[6/29] e2e\download.spec.ts:12:5 › Xem trước goes full screen; Esc and Đóng return with input kept
+[7/29] e2e\editor.spec.ts:20:5 › leaving a required field empty shows a Vietnamese error
+[8/29] e2e\editor-gaps.spec.ts:24:5 › Lời mời stops at 300 characters when typed
+[9/29] e2e\customise.spec.ts:11:7 › Playfair Display renders Vietnamese diacritics from its own web font
+[10/29] e2e\download.spec.ts:28:7 › Tải về saves a PNG at least 1080 px wide at 1920 px
+[11/29] e2e\download-gaps.spec.ts:130:5 › full screen keeps palette, font and background, and shows them
+[12/29] e2e\editor.spec.ts:27:5 › form and preview sit side by side at 1024 px
+[13/29] e2e\customise.spec.ts:11:7 › Dancing Script renders Vietnamese diacritics from its own web font
+[14/29] e2e\customise-gaps.spec.ts:42:5 › Xoá ảnh nền restores the template default and keeps every typed value
+[15/29] e2e\download.spec.ts:28:7 › Tải về saves a PNG at least 1080 px wide at 375 px
+[16/29] e2e\editor.spec.ts:36:5 › preview sits below the form at 375 px
+[17/29] e2e\download-gaps.spec.ts:157:5 › Tải về stays disabled while a required field is only spaces; hint is in Vietnamese
+[18/29] e2e\editor-gaps.spec.ts:32:5 › form and preview sit side by side at 1920 px
+[19/29] e2e\customise.spec.ts:30:5 › a palette recolours the preview names
+[20/29] e2e\picker-gaps.spec.ts:9:5 › every card thumbnail actually loads
+[21/29] e2e\picker-gaps.spec.ts:23:7 › clicking "Cổ điển" opens /tao?mau=co-dien
+[22/29] e2e\picker.spec.ts:3:5 › picks a template and opens the editor
+[23/29] e2e\download-gaps.spec.ts:178:5 › with no uploaded background the PNG is opaque white, as the preview looks
+[24/29] e2e\picker-gaps.spec.ts:23:7 › clicking "Hoa đào" opens /tao?mau=hoa-dao
+[25/29] e2e\picker.spec.ts:13:5 › unknown template redirects home
+[26/29] e2e\picker.spec.ts:18:5 › cards stack in one column at 375 px
+[27/29] e2e\picker-gaps.spec.ts:23:7 › clicking "Tối giản" opens /tao?mau=toi-gian
+  1) e2e\download-gaps.spec.ts:178:5 › with no uploaded background the PNG is opaque white, as the preview looks 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Array [
+    -   255,
+    -   255,
+    -   255,
+    -   255,
+    +   0,
+    +   0,
+    +   0,
+    +   0,
+      ]
+
+      191 |     return [at(40, Math.floor(img.height / 2)), at(Math.floor(img.width / 2), 10)];
+      192 |   }, png.toString("base64"));
+    > 193 |   for (const px of pixels) expect(px).toEqual([255, 255, 255, 255]);
+          |                                       ^
+      194 | });
+      195 |
+        at D:\home\study\AI\toi-nguyen\super-board\.claude\worktrees\issue-4-qa\e2e\download-gaps.spec.ts:193:39
+
+    Error Context: test-results\download-gaps-with-no-uplo-00e77--white-as-the-preview-looks\error-context.md
+
+
+[28/29] e2e\picker-gaps.spec.ts:31:5 › missing mau redirects home
+[29/29] e2e\picker-gaps.spec.ts:36:5 › repeated mau redirects home
+  1 failed
+    e2e\download-gaps.spec.ts:178:5 › with no uploaded background the PNG is opaque white, as the preview looks 
+  28 passed (12.6s)
