@@ -1,0 +1,18 @@
+
+Running 13 tests using 3 workers
+
+  ✓   3 e2e\picker-gaps.spec.ts:9:5 › every card thumbnail actually loads (341ms)
+  ✓   2 e2e\picker.spec.ts:3:5 › picks a template and opens the editor (359ms)
+  ✓   4 e2e\picker-gaps.spec.ts:23:7 › clicking "Cổ điển" opens /tao?mau=co-dien (238ms)
+  ✓   5 e2e\picker.spec.ts:13:5 › unknown template redirects home (223ms)
+  ✓   7 e2e\picker.spec.ts:18:5 › cards stack in one column at 375 px (167ms)
+  ✓   6 e2e\picker-gaps.spec.ts:23:7 › clicking "Hoa đào" opens /tao?mau=hoa-dao (233ms)
+  ✓   1 e2e\zz-shots.spec.ts:11:7 › shot desktop (940ms)
+  ✓   8 e2e\picker-gaps.spec.ts:23:7 › clicking "Tối giản" opens /tao?mau=toi-gian (229ms)
+  ✓  10 e2e\picker-gaps.spec.ts:31:5 › missing mau redirects home (164ms)
+  ✓  11 e2e\picker-gaps.spec.ts:36:5 › repeated mau redirects home (164ms)
+  ✓   9 e2e\zz-shots.spec.ts:11:7 › shot tablet (711ms)
+  ✓  12 e2e\zz-shots.spec.ts:11:7 › shot mobile (707ms)
+  ✓  13 e2e\zz-shots.spec.ts:19:5 › shot editor (479ms)
+
+  13 passed (9.6s)
