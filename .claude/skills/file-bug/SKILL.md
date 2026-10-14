@@ -1,0 +1,65 @@
+---
+name: file-bug
+description: Reproduce a bug in the running app, then file it as a GitHub issue in super-board's bug format (Problem · Context · Evidence · Fix · AC · Risk). Use when someone says "file a bug", "report this bug", "tạo bug", "tạo ticket bug", "/file-bug", or describes broken behaviour they want ticketed.
+---
+
+# file-bug — reproduce first, then ticket
+
+One job: turn "X looks broken" into one GitHub issue that a teammate or `/super-build` can fix
+without asking a question. The format is not defined here: it is
+`.claude/skills/super-board/references/writing-standard.md` § 3 (Ticket + Bug Evidence).
+This skill is the workflow around it.
+
+| Rule | Value |
+|---|---|
+| Source of truth | what you SAW in the running app. Code reading only adds a "likely cause" line |
+| No repro | NEVER file. Report what you tried and stop |
+| Evidence | NEVER invent. A row you did not measure says `n/a — <why>` |
+| Scope | one bug per ticket |
+| Secrets | NEVER read `.env`. No real customer data in inputs or screenshots |
+| Filing | show the title and body to the user and wait for an OK before `gh issue create` |
+
+## Steps
+
+1. **Pin the report.** Route, inputs, expected vs actual. Ask one question only if the route or
+   the input cannot be guessed.
+2. **Run the app.** `npm ci` if `node_modules` is missing, then `npm run dev` on
+   `http://localhost:3000`. Reuse a dev server that is already running. Note the branch and
+   `git rev-parse --short HEAD` for the Env row.
+3. **Reproduce in a real browser, like a user.** Use Claude in Chrome or the browser pane when
+   available. Otherwise drive headless Chromium with Playwright (`@playwright/test` is already
+   a dev dependency): open the page, click, type, read the result. Capture the browser console.
+4. **Vary the input.** Try 2–4 inputs around the failure, including one control that works.
+   Run each the same way and keep the observed output for a table.
+5. **Screenshot the failure** (desktop 1280 wide; add mobile 375 when layout matters).
+   Commit it under `docs/super-board/bugs/<yyyy-mm-dd>-<slug>/` on a branch
+   `evidence/<slug>` and push, then embed it with a raw URL pinned to that commit sha.
+   NEVER link it, NEVER upload to an image host.
+6. **Find the likely cause, briefly.** Only now open the code. One line in the Evidence
+   "Error + stack" row: file and why. No implementation plan.
+7. **Write the body** per writing-standard.md § 3:
+   - Title `🐛 [bug] <scope>: <what is wrong>`, ≤ 70 chars, no ticket number
+   - `## Context`: lettered steps under Where (one per line, NEVER arrows), Who, screenshot,
+     then the input/output table from step 4
+   - `## Evidence`: the folded 12-row table, all 12 rows
+   - `## Acceptance Criteria`: 2–5 checkable lines, one of them a unit or e2e test
+8. **Validate the body.** It must exit 0:
+   ```bash
+   .claude/bin/super-qa-file-bug.sh --check-body --title "<title>" --body-file /tmp/bug.md
+   ```
+9. **Confirm, then file.** Show the title and body. After the user's OK:
+   ```bash
+   gh issue create --repo toinguyen-agilityio/super-board --label bug \
+     --title "<title>" --body-file /tmp/bug.md
+   ```
+   Then put it in the board's Backlog if it is not there yet
+   (`gh project item-add 1 --owner toinguyen-agilityio --url <issue-url>`). `/super-board lint`
+   decides when it is Ready.
+10. **Report** the issue URL and one line on what reproduced.
+
+## Example
+
+[#11 🐛 download: PNG file name drops non-Latin names](https://github.com/toinguyen-agilityio/super-board/issues/11):
+reproduced by clicking through `/tao?mau=co-dien` with bride `李华`; variants table with a
+Korean name, emoji and a Vietnamese control; Evidence rows that were not measured say
+`n/a — <why>`.
