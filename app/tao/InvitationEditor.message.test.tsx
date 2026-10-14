@@ -29,6 +29,17 @@ it("accepts 300 emoji and refuses the 301st with 0 left", () => {
   expect(message.value).toBe("💐".repeat(300));
 });
 
+it("refuses an insert in the middle of a full message instead of cutting its end", () => {
+  const { message, type } = setup();
+  const full = "a".repeat(150) + "b".repeat(150);
+  type(full);
+  fireEvent.change(message, {
+    target: { value: full.slice(0, 10) + "X" + full.slice(10), selectionStart: 11, selectionEnd: 11 },
+  });
+  expect(message.value).toBe(full);
+  expect(screen.getByText("Còn 0 ký tự")).toBeTruthy();
+});
+
 it("counts composed and decomposed Vietnamese the same", () => {
   const { type } = setup();
   const text = "Trân trọng kính mời";
