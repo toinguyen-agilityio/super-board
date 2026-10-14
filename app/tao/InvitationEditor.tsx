@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } fro
 import { toPng } from "html-to-image";
 import { backgroundError, fonts, palettes, type Font, type Palette } from "@/lib/customise";
 import { invitationFileName } from "@/lib/download";
+import { countGraphemes, truncateGraphemes } from "@/lib/message";
 import type { Template } from "@/lib/templates";
 
 const MESSAGE_MAX = 300;
@@ -166,14 +167,22 @@ export default function InvitationEditor({
           <textarea
             id="f-message"
             rows={4}
-            maxLength={MESSAGE_MAX}
             value={details.message}
-            onChange={(e) => set("message", e.target.value.slice(0, MESSAGE_MAX))}
+            onChange={(e) => {
+              const el = e.target;
+              const next = truncateGraphemes(el.value, MESSAGE_MAX);
+              if (next !== el.value) {
+                // Refused/pasted overflow: keep the caret where the user was, within the kept text.
+                const caret = Math.min(el.selectionStart, next.length);
+                queueMicrotask(() => el.setSelectionRange(caret, caret));
+              }
+              set("message", next);
+            }}
             aria-describedby="f-message-count"
             className="rounded border border-neutral-300 px-3 py-2"
           />
           <p id="f-message-count" className="text-sm text-neutral-600" aria-live="polite">
-            Còn {MESSAGE_MAX - details.message.length} ký tự
+            Còn {MESSAGE_MAX - countGraphemes(details.message)} ký tự
           </p>
         </div>
 
