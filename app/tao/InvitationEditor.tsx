@@ -170,12 +170,15 @@ export default function InvitationEditor({
             value={details.message}
             onChange={(e) => {
               const el = e.target;
-              const next = truncateGraphemes(el.value, MESSAGE_MAX);
-              if (next !== el.value) {
-                // Refused/pasted overflow: keep the caret where the user was, within the kept text.
-                const caret = Math.min(el.selectionStart, next.length);
-                queueMicrotask(() => el.setSelectionRange(caret, caret));
-              }
+              // Trim overflow from the inserted text (before the caret), never from the message's end.
+              const caret = el.selectionStart;
+              const after = el.value.slice(caret);
+              const before = truncateGraphemes(
+                el.value.slice(0, caret),
+                Math.max(0, MESSAGE_MAX - countGraphemes(after)),
+              );
+              const next = before + after;
+              if (next !== el.value) queueMicrotask(() => el.setSelectionRange(before.length, before.length));
               set("message", next);
             }}
             aria-describedby="f-message-count"
