@@ -23,3 +23,10 @@ it("falls back to a placeholder when a name has no letters or digits (#11)", () 
 it("still drops characters unsafe in file names next to non-Latin letters (#11)", () => {
   expect(invitationFileName('李/华:*?"<>|\\', "Đức")).toBe("thiep-cuoi-李华-Duc.png");
 });
+
+it("keeps the marks that non-Latin scripts need (#11)", () => {
+  expect(invitationFileName("हिन्दी", "Minh")).toBe("thiep-cuoi-हिन्दी-Minh.png");
+  // Decomposed input: か + combining voiced mark, and Hangul jamo.
+  expect(invitationFileName("が", "Minh")).toBe("thiep-cuoi-が-Minh.png");
+  expect(invitationFileName("각", "Minh")).toBe("thiep-cuoi-각-Minh.png");
+});

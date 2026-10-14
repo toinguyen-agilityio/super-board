@@ -1,5 +1,5 @@
 // "Nguyễn Thị Hằng", "Trần Văn Đức" → "thiep-cuoi-Nguyen-Thi-Hang-Tran-Van-Duc.png"
-// "李华", "김민지" keep their letters; a name with no letters or digits gets a placeholder.
+// "李华", "김민지", "हिन्दी" keep their letters and marks; a name with no letters or digits gets a placeholder.
 function slug(name: string) {
   return name
     .normalize("NFD")
@@ -10,7 +10,7 @@ function slug(name: string) {
     .replace(/Đ/g, "D")
     .trim()
     .split(/\s+/)
-    .map((word) => word.replace(/[^\p{L}\p{N}-]/gu, ""))
+    .map((word) => word.replace(/[^\p{L}\p{M}\p{N}-]/gu, ""))
     .filter(Boolean)
     .join("-");
 }
