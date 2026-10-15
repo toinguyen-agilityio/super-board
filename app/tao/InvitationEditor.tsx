@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } fro
 import { toPng } from "html-to-image";
 import { backgroundError, fonts, palettes, type Font, type Palette } from "@/lib/customise";
 import { invitationFileName } from "@/lib/download";
+import { countGraphemes, truncateGraphemes } from "@/lib/message";
 import type { Template } from "@/lib/templates";
 
 const MESSAGE_MAX = 300;
@@ -129,6 +130,17 @@ export default function InvitationEditor({
   // bg-white: the preview owns its white card, so the PNG is opaque rather than transparent.
   const previewClass = "flex flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-white p-8 text-center";
 
+  // Trim overflow from the inserted text (before the caret), never from the message's end.
+  function limitMessage(el: HTMLTextAreaElement) {
+    // Fast path: splitting at a caret inside a cluster (NFD marks, ZWJ) overcounts, so only split when over.
+    if (countGraphemes(el.value) <= MESSAGE_MAX) return set("message", el.value);
+    const caret = el.selectionStart;
+    const after = el.value.slice(caret);
+    const before = truncateGraphemes(el.value.slice(0, caret), Math.max(0, MESSAGE_MAX - countGraphemes(after)));
+    queueMicrotask(() => el.setSelectionRange(before.length, before.length));
+    set("message", before + after);
+  }
+
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
       <form className="flex flex-col gap-4" noValidate onSubmit={(e) => e.preventDefault()}>
@@ -166,14 +178,18 @@ export default function InvitationEditor({
           <textarea
             id="f-message"
             rows={4}
-            maxLength={MESSAGE_MAX}
             value={details.message}
-            onChange={(e) => set("message", e.target.value.slice(0, MESSAGE_MAX))}
+            onChange={(e) => {
+              // Rewriting value mid-composition breaks Telex/VNI input; onCompositionEnd applies the limit.
+              if ((e.nativeEvent as InputEvent).isComposing) set("message", e.target.value);
+              else limitMessage(e.target);
+            }}
+            onCompositionEnd={(e) => limitMessage(e.currentTarget)}
             aria-describedby="f-message-count"
             className="rounded border border-neutral-300 px-3 py-2"
           />
           <p id="f-message-count" className="text-sm text-neutral-600" aria-live="polite">
-            Còn {MESSAGE_MAX - details.message.length} ký tự
+            Còn {Math.max(0, MESSAGE_MAX - countGraphemes(details.message))} ký tự
           </p>
         </div>
 

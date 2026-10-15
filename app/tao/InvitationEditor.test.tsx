@@ -47,7 +47,6 @@ it("never shows an error for the optional Lời mời", () => {
 it("caps Lời mời at 300 characters with a remaining counter", () => {
   render(<InvitationEditor template={template} />);
   const message = screen.getByLabelText("Lời mời");
-  expect(message.getAttribute("maxlength")).toBe("300");
   expect(screen.getByText("Còn 300 ký tự")).toBeTruthy();
   fireEvent.change(message, { target: { value: "x".repeat(320) } });
   expect(screen.getByText("Còn 0 ký tự")).toBeTruthy();
