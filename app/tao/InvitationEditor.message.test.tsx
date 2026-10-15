@@ -61,3 +61,28 @@ it("leaves plain Vietnamese unchanged", () => {
   expect(message.value).toBe("Trân trọng kính mời");
   expect(screen.getByText("Còn 281 ký tự")).toBeTruthy();
 });
+
+it("keeps a 300-character message when the caret sits inside a grapheme cluster", () => {
+  const { message, type } = setup();
+  const family = "👨‍👩‍👧";
+  const full = "a".repeat(298) + family + "b";
+  type("a".repeat(298));
+  // Caret right after "👨‍": splitting there counts the family as two clusters.
+  const caret = 298 + "👨‍".length;
+  fireEvent.change(message, { target: { value: full, selectionStart: caret, selectionEnd: caret } });
+  expect(message.value).toBe(full);
+  expect(screen.getByText("Còn 0 ký tự")).toBeTruthy();
+});
+
+it("does not trim during IME composition and applies the limit when it ends", () => {
+  const { message, type } = setup();
+  const full = "a".repeat(300);
+  type(full);
+  const composing = full.slice(0, 10) + "â" + full.slice(10);
+  fireEvent.compositionStart(message);
+  fireEvent.input(message, { target: { value: composing, selectionStart: 11, selectionEnd: 11 }, isComposing: true });
+  expect(message.value).toBe(composing);
+  fireEvent.compositionEnd(message);
+  expect(message.value).toBe(full);
+  expect(screen.getByText("Còn 0 ký tự")).toBeTruthy();
+});
