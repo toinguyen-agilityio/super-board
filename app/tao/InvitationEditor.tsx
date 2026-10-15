@@ -130,6 +130,17 @@ export default function InvitationEditor({
   // bg-white: the preview owns its white card, so the PNG is opaque rather than transparent.
   const previewClass = "flex flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-white p-8 text-center";
 
+  // Trim overflow from the inserted text (before the caret), never from the message's end.
+  function limitMessage(el: HTMLTextAreaElement) {
+    // Fast path: splitting at a caret inside a cluster (NFD marks, ZWJ) overcounts, so only split when over.
+    if (countGraphemes(el.value) <= MESSAGE_MAX) return set("message", el.value);
+    const caret = el.selectionStart;
+    const after = el.value.slice(caret);
+    const before = truncateGraphemes(el.value.slice(0, caret), Math.max(0, MESSAGE_MAX - countGraphemes(after)));
+    queueMicrotask(() => el.setSelectionRange(before.length, before.length));
+    set("message", before + after);
+  }
+
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
       <form className="flex flex-col gap-4" noValidate onSubmit={(e) => e.preventDefault()}>
@@ -169,23 +180,16 @@ export default function InvitationEditor({
             rows={4}
             value={details.message}
             onChange={(e) => {
-              const el = e.target;
-              // Trim overflow from the inserted text (before the caret), never from the message's end.
-              const caret = el.selectionStart;
-              const after = el.value.slice(caret);
-              const before = truncateGraphemes(
-                el.value.slice(0, caret),
-                Math.max(0, MESSAGE_MAX - countGraphemes(after)),
-              );
-              const next = before + after;
-              if (next !== el.value) queueMicrotask(() => el.setSelectionRange(before.length, before.length));
-              set("message", next);
+              // Rewriting value mid-composition breaks Telex/VNI input; onCompositionEnd applies the limit.
+              if ((e.nativeEvent as InputEvent).isComposing) set("message", e.target.value);
+              else limitMessage(e.target);
             }}
+            onCompositionEnd={(e) => limitMessage(e.currentTarget)}
             aria-describedby="f-message-count"
             className="rounded border border-neutral-300 px-3 py-2"
           />
           <p id="f-message-count" className="text-sm text-neutral-600" aria-live="polite">
-            Còn {MESSAGE_MAX - countGraphemes(details.message)} ký tự
+            Còn {Math.max(0, MESSAGE_MAX - countGraphemes(details.message))} ký tự
           </p>
         </div>
 
