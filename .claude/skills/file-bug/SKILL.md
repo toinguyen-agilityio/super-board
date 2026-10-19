@@ -1,7 +1,7 @@
 ---
 name: file-bug
 description: Reproduce a bug in the running app, then file it as a GitHub issue in super-board's bug format (Problem · Context · Evidence · Fix · AC · Risk). Use when someone says "file a bug", "report this bug", "tạo bug", "tạo ticket bug", "/file-bug", or describes broken behaviour they want ticketed.
-allowed-tools: Bash(npm run dev *), Bash(git rev-parse *), Bash(.claude/bin/super-qa-file-bug.sh *)
+allowed-tools: Bash(npm run dev *), Bash(git rev-parse *), Bash(node .claude/skills/file-bug/scripts/screenshot.mjs *), Bash(.claude/bin/super-qa-file-bug.sh *)
 model: sonnet
 ---
 
@@ -33,18 +33,18 @@ This skill is the workflow around it.
    a dev dependency): open the page, click, type, read the result. Capture the browser console.
 4. **Vary the input.** Try 2–4 inputs around the failure, including one control that works.
    Run each the same way and keep the observed output for a table.
-5. **Screenshot the failure** (desktop 1280 wide; add mobile 375 when layout matters).
-   Commit it under `docs/super-board/bugs/<yyyy-mm-dd>-<slug>/` on a branch
-   `evidence/<slug>` and push, then embed it with a raw URL pinned to that commit sha.
+5. **Screenshot the failure.** Run
+   `node .claude/skills/file-bug/scripts/screenshot.mjs <url> docs/super-board/bugs/<yyyy-mm-dd>-<slug>/`
+   (add `--mobile` when layout matters). It saves `desktop.png` (1280 wide) and prints the
+   browser console for the Logs row. Commit the folder on a branch `evidence/<slug>` and
+   push, then embed each image with a raw URL pinned to that commit sha.
    NEVER link it, NEVER upload to an image host.
 6. **Find the likely cause, briefly.** Only now open the code. One line in the Evidence
    "Error + stack" row: file and why. No implementation plan.
-7. **Write the body** per writing-standard.md § 3:
-   - Title `🐛 [bug] <scope>: <what is wrong>`, ≤ 70 chars, no ticket number
-   - `## Context`: lettered steps under Where (one per line, NEVER arrows), Who, screenshot,
-     then the input/output table from step 4
-   - `## Evidence`: the folded 12-row table, all 12 rows
-   - `## Acceptance Criteria`: 2–5 checkable lines, one of them a unit or e2e test
+7. **Write the body.** Copy [assets/bug-body.md](assets/bug-body.md) to `/tmp/bug.md` and
+   fill every `<...>`. Title and section rules, and what the validator rejects, are in
+   [references/writing-the-body.md](references/writing-the-body.md). Read it before the
+   first draft and whenever step 8 fails.
 8. **Validate the body.** It must exit 0:
    ```bash
    .claude/bin/super-qa-file-bug.sh --check-body --title "<title>" --body-file /tmp/bug.md
@@ -58,10 +58,3 @@ This skill is the workflow around it.
    (`gh project item-add 1 --owner toinguyen-agilityio --url <issue-url>`). `/super-board lint`
    decides when it is Ready.
 10. **Report** the issue URL and one line on what reproduced.
-
-## Example
-
-[#11 🐛 download: PNG file name drops non-Latin names](https://github.com/toinguyen-agilityio/super-board/issues/11):
-reproduced by clicking through `/tao?mau=co-dien` with bride `李华`; variants table with a
-Korean name, emoji and a Vietnamese control; Evidence rows that were not measured say
-`n/a — <why>`.
