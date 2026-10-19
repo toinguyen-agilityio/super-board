@@ -1,6 +1,8 @@
 ---
 name: file-bug
 description: Reproduce a bug in the running app, then file it as a GitHub issue in super-board's bug format (Problem · Context · Evidence · Fix · AC · Risk). Use when someone says "file a bug", "report this bug", "tạo bug", "tạo ticket bug", "/file-bug", or describes broken behaviour they want ticketed.
+allowed-tools: Bash(npm run dev *), Bash(git rev-parse *), Bash(.claude/bin/super-qa-file-bug.sh *)
+model: sonnet
 ---
 
 # file-bug — reproduce first, then ticket
