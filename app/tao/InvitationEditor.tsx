@@ -19,6 +19,31 @@ const fields = [
 
 type Details = Record<(typeof fields)[number]["name"] | "message", string>;
 
+// Each template's own card, layout and ornament; mirrors its thumbnail in public/templates.
+const looks = {
+  "co-dien": {
+    card: "border-4 border-[#7f1d1d] bg-[#fef3c7] p-3",
+    body: "flex flex-col items-center gap-3 border border-[#7f1d1d] p-6 text-center",
+    ornament: (
+      <div data-ornament="vong-tron" aria-hidden="true" className="size-14 rounded-full border-[3px] border-[#7f1d1d]" />
+    ),
+  },
+  "hoa-dao": {
+    card: "rounded-3xl border-2 border-[#db2777] bg-[#fdf2f8] p-8",
+    body: "flex flex-col items-center gap-3 text-center",
+    ornament: (
+      <div data-ornament="hoa-dao" aria-hidden="true" className="text-3xl tracking-[0.5em] text-[#db2777]">
+        ✿ ❀ ✿
+      </div>
+    ),
+  },
+  "toi-gian": {
+    card: "border border-neutral-400 bg-[#fafafa] p-10",
+    body: "flex flex-col items-start gap-3 text-left",
+    ornament: <hr data-ornament="duong-ke" aria-hidden="true" className="w-12 border-t-2 border-neutral-700" />,
+  },
+} as const;
+
 const empty: Details = { bride: "", groom: "", when: "", venue: "", message: "" };
 
 // "2026-12-20T18:00" → "18:00 · 20/12/2026", read as typed (no timezone shift).
@@ -102,8 +127,10 @@ export default function InvitationEditor({
     }
   };
 
+  const look = looks[template.id as keyof typeof looks] ?? looks["toi-gian"];
   const previewContent = (
-    <>
+    <div className={look.body}>
+      {look.ornament}
       <p className="text-sm uppercase tracking-wide text-neutral-500">Mẫu: {template.name}</p>
       <p className="text-sm">Trân trọng báo tin lễ thành hôn của</p>
       <p className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
@@ -114,7 +141,7 @@ export default function InvitationEditor({
       <p>{formatWhen(details.when) || "Ngày giờ"}</p>
       <p>{details.venue || "Địa điểm"}</p>
       {details.message && <p className="whitespace-pre-line italic">{details.message}</p>}
-    </>
+    </div>
   );
 
   const previewStyle = {
@@ -127,8 +154,8 @@ export default function InvitationEditor({
     backgroundSize: background ? "cover" : undefined,
     backgroundPosition: background ? "center" : undefined,
   } as CSSProperties;
-  // bg-white: the preview owns its white card, so the PNG is opaque rather than transparent.
-  const previewClass = "flex flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-white p-8 text-center";
+  // The template's card has an opaque background colour, so the PNG is opaque rather than transparent.
+  const previewClass = look.card;
 
   // Trim overflow from the inserted text (before the caret), never from the message's end.
   function limitMessage(el: HTMLTextAreaElement) {
