@@ -6,6 +6,7 @@ const toPng = vi.hoisted(() => vi.fn(async () => "data:image/png;base64,AAAA"));
 const toJpeg = vi.hoisted(() => vi.fn(async () => "data:image/jpeg;base64,/9j/4AAQ"));
 vi.mock("html-to-image", () => ({ toPng, toJpeg }));
 
+
 const template = { id: "hoa-dao", name: "Hoa đào" };
 const download = () => screen.getByRole("button", { name: "Tải về" });
 const fill = () => {

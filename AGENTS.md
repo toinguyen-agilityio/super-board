@@ -42,3 +42,7 @@ Board: Backlog · Ready · Building · QA · Review · Blocked · Done. Labels r
 - NEVER link screenshots. Embed a raw URL pinned to a sha.
 - DON'T repeat file lists in status comments. DON'T write "Not verified" or "Next" in a PR body.
 <!-- super-board:end -->
+
+## Filing bugs
+
+Reproduce a bug in the running app before filing it. NEVER ticket a bug from code reading alone. Use `/file-bug` (`.claude/skills/file-bug/SKILL.md`).
