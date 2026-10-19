@@ -16,6 +16,29 @@ function slug(name: string, fallback: string) {
   return result || fallback;
 }
 
-export function invitationFileName(bride: string, groom: string) {
-  return `thiep-cuoi-${slug(bride, "co-dau")}-${slug(groom, "chu-re")}.png`;
+export const RATIOS = [
+  { id: "portrait", label: "Dọc 4:5", width: 4, height: 5 },
+  { id: "story", label: "Story 9:16", width: 9, height: 16 },
+  { id: "square", label: "Vuông 1:1", width: 1, height: 1 },
+] as const;
+export const QUALITIES = [2, 3] as const;
+export const FORMATS = ["png", "pdf"] as const;
+
+export type Ratio = (typeof RATIOS)[number];
+export type Quality = (typeof QUALITIES)[number];
+export type Format = (typeof FORMATS)[number];
+
+// Each quality step is 540 px of output width: 2x gives 1080 px, 3x gives 1620 px.
+const BASE_WIDTH = 540;
+
+// The pixel ratio that makes the export at least quality * 540 px wide. html-to-image rounds a fractional
+// card width and truncates the canvas, so size from the rounded-down width with one spare pixel.
+export function exportPixelRatio(quality: Quality, cardWidth: number) {
+  const width = Math.floor(cardWidth);
+  if (!width) return quality;
+  return Math.ceil(((quality * BASE_WIDTH + 1) / width) * 1000) / 1000;
+}
+
+export function invitationFileName(bride: string, groom: string, format: Format = "png") {
+  return `thiep-cuoi-${slug(bride, "co-dau")}-${slug(groom, "chu-re")}.${format}`;
 }
