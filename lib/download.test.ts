@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { invitationFileName } from "./download";
+import { FORMATS, QUALITIES, RATIOS, exportPixelRatio, invitationFileName } from "./download";
 
 it("strips diacritics and joins words with -", () => {
   expect(invitationFileName("Nguyễn Thị Hằng", "Trần Văn Đức")).toBe(
@@ -35,4 +35,26 @@ it("keeps the marks that non-Latin scripts need (#11)", () => {
   // Decomposed input: か + combining voiced mark, and Hangul jamo.
   expect(invitationFileName("が", "Minh")).toBe("thiep-cuoi-が-Minh.png");
   expect(invitationFileName("각", "Minh")).toBe("thiep-cuoi-각-Minh.png");
+});
+
+it("swaps only the extension for the chosen format", () => {
+  expect(invitationFileName("Nguyễn Thị Hằng", "Trần Văn Đức", "pdf")).toBe(
+    "thiep-cuoi-Nguyen-Thi-Hang-Tran-Van-Duc.pdf",
+  );
+  expect(invitationFileName("😀", "Minh", "png")).toBe("thiep-cuoi-co-dau-Minh.png");
+});
+
+it("offers 4:5, 9:16 and 1:1, 2x and 3x, PNG and PDF", () => {
+  expect(RATIOS.map((r) => `${r.width}:${r.height}`)).toEqual(["4:5", "9:16", "1:1"]);
+  expect(QUALITIES).toEqual([2, 3]);
+  expect(FORMATS).toEqual(["png", "pdf"]);
+});
+
+it("picks a pixel ratio so 2x exports 1080 px wide and 3x exports 1620 px wide", () => {
+  expect(exportPixelRatio(2, 0)).toBe(2);
+  for (const w of [280, 327, 375, 476, 499.6, 500.4, 540, 768, 1200.7]) {
+    expect(Math.floor(Math.floor(w) * exportPixelRatio(2, w))).toBeGreaterThanOrEqual(1080);
+    expect(Math.floor(Math.floor(w) * exportPixelRatio(3, w))).toBeGreaterThanOrEqual(1620);
+    expect(exportPixelRatio(3, w)).toBeGreaterThan(exportPixelRatio(2, w));
+  }
 });
