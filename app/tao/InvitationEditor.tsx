@@ -1,14 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } from "react";
-import { toPng } from "html-to-image";
+import { toJpeg, toPng } from "html-to-image";
 import { backgroundError, fonts, palettes, type Font, type Palette } from "@/lib/customise";
-import { invitationFileName } from "@/lib/download";
+import {
+  dataUrlToBytes,
+  exportSize,
+  formats,
+  invitationFileName,
+  jpegToPdf,
+  qualities,
+  ratios,
+  type Format,
+  type Quality,
+  type Ratio,
+} from "@/lib/download";
 import { countGraphemes, truncateGraphemes } from "@/lib/message";
 import type { Template } from "@/lib/templates";
 
 const MESSAGE_MAX = 300;
-const PNG_MIN_WIDTH = 1080;
 
 const fields = [
   { name: "bride", label: "Tên cô dâu", type: "text", error: "Vui lòng nhập tên cô dâu" },
@@ -65,6 +75,10 @@ export default function InvitationEditor({
   const [background, setBackground] = useState<string | null>(null);
   const [backgroundMessage, setBackgroundMessage] = useState<string | null>(null);
 
+  const [ratio, setRatio] = useState<Ratio>(ratios[0]);
+  const [quality, setQuality] = useState<Quality>(2);
+  const [format, setFormat] = useState<Format>("png");
+
   const [fullScreen, setFullScreen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -107,19 +121,33 @@ export default function InvitationEditor({
     if (!error) setBackground(URL.createObjectURL(file));
   };
 
-  // Exports the on-screen preview; an integer pixel ratio keeps the PNG at least 1080 px wide.
-  const savePng = async () => {
+  // Exports the preview at the chosen ratio: a 540 px wide canvas × quality, so 2x is already 1080 px wide.
+  const save = async () => {
     const node = previewRef.current;
     if (!node) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const pixelRatio = Math.max(1, Math.ceil(PNG_MIN_WIDTH / (node.offsetWidth || PNG_MIN_WIDTH)));
-      const dataUrl = await toPng(node, { pixelRatio });
+      const { width, height } = exportSize(ratio);
+      const options = {
+        width,
+        height,
+        pixelRatio: quality,
+        style: { width: `${width}px`, height: `${height}px` },
+      };
+      let href: string;
+      if (format === "pdf") {
+        const jpeg = await toJpeg(node, { ...options, quality: 0.95, backgroundColor: "#ffffff" });
+        const pdf = jpegToPdf(dataUrlToBytes(jpeg), width * quality, height * quality);
+        href = URL.createObjectURL(new Blob([pdf as BlobPart], { type: "application/pdf" }));
+      } else {
+        href = await toPng(node, options);
+      }
       const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = invitationFileName(details.bride, details.groom);
+      a.href = href;
+      a.download = invitationFileName(details.bride, details.groom, format);
       a.click();
+      if (format === "pdf") URL.revokeObjectURL(href);
     } catch {
       setSaveError("Không tạo được ảnh thiệp, vui lòng thử lại");
     } finally {
@@ -295,6 +323,33 @@ export default function InvitationEditor({
         >
           {previewContent}
         </section>
+        <fieldset className="flex flex-col gap-3 rounded border border-neutral-200 p-4">
+          <legend className="px-1 font-medium">Tuỳ chọn tải về</legend>
+          <div role="radiogroup" aria-label="Tỉ lệ" className="flex flex-wrap gap-2">
+            {ratios.map((r) => (
+              <label key={r.id} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+                <input type="radio" name="ratio" checked={ratio.id === r.id} onChange={() => setRatio(r)} />
+                {r.name}
+              </label>
+            ))}
+          </div>
+          <div role="radiogroup" aria-label="Chất lượng" className="flex flex-wrap gap-2">
+            {qualities.map((q) => (
+              <label key={q} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+                <input type="radio" name="quality" checked={quality === q} onChange={() => setQuality(q)} />
+                {q}x
+              </label>
+            ))}
+          </div>
+          <div role="radiogroup" aria-label="Định dạng" className="flex flex-wrap gap-2">
+            {formats.map((f) => (
+              <label key={f} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+                <input type="radio" name="format" checked={format === f} onChange={() => setFormat(f)} />
+                {f.toUpperCase()}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="flex flex-wrap gap-2">
           <button
             ref={openButtonRef}
@@ -307,7 +362,7 @@ export default function InvitationEditor({
           <button
             type="button"
             disabled={!ready || saving}
-            onClick={savePng}
+            onClick={save}
             aria-describedby={ready ? undefined : "download-hint"}
             className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
           >
