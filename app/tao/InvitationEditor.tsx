@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type CSSProperties, type ComponentProps } from "react";
+import { toJpeg, toPng } from "html-to-image";
 import { backgroundError, fonts, palettes, type Font, type Palette } from "@/lib/customise";
-import { invitationFileName } from "@/lib/download";
+import {
+  FORMATS,
+  QUALITIES,
+  RATIOS,
+  exportPixelRatio,
+  invitationFileName,
+  type Format,
+  type Quality,
+  type Ratio,
+} from "@/lib/download";
 import { countGraphemes, truncateGraphemes } from "@/lib/message";
+import { jpegToPdf } from "@/lib/pdf";
 import type { Template } from "@/lib/templates";
 
 const MESSAGE_MAX = 300;
-const PNG_MIN_WIDTH = 1080;
 
 const fields = [
   { name: "bride", label: "Tên cô dâu", type: "text", error: "Vui lòng nhập tên cô dâu" },
@@ -17,7 +26,44 @@ const fields = [
   { name: "venue", label: "Địa điểm", type: "text", error: "Vui lòng nhập địa điểm" },
 ] as const;
 
-type Details = Record<(typeof fields)[number]["name"] | "message", string>;
+const optionalFields = [
+  { name: "groomParents", label: "Phụ huynh nhà trai", type: "text" },
+  { name: "brideParents", label: "Phụ huynh nhà gái", type: "text" },
+  { name: "lunarDate", label: "Ngày âm lịch", type: "text" },
+  { name: "dressCode", label: "Trang phục", type: "text" },
+  { name: "mapLink", label: "Liên kết bản đồ", type: "url" },
+] as const;
+
+type Details = Record<
+  (typeof fields)[number]["name"] | (typeof optionalFields)[number]["name"] | "message",
+  string
+>;
+
+const empty: Details = {
+  bride: "",
+  groom: "",
+  when: "",
+  venue: "",
+  message: "",
+  groomParents: "",
+  brideParents: "",
+  lunarDate: "",
+  dressCode: "",
+  mapLink: "",
+};
+
+const MAP_LINK_ERROR = "Liên kết bản đồ không hợp lệ";
+
+// An empty map link is fine; otherwise it must be an http(s) URL.
+function mapLinkValid(value: string) {
+  const v = value.trim();
+  if (!v) return true;
+  try {
+    return ["http:", "https:"].includes(new URL(v).protocol);
+  } catch {
+    return false;
+  }
+}
 
 // Each template's own card, layout and ornament; mirrors its thumbnail in public/templates.
 const looks = {
@@ -44,8 +90,6 @@ const looks = {
   },
 } as const;
 
-const empty: Details = { bride: "", groom: "", when: "", venue: "", message: "" };
-
 // One draft per template; the background is a blob URL, so it is not saved.
 const draftKey = (templateId: string) => `thiep-draft:${templateId}`;
 
@@ -53,6 +97,63 @@ const draftKey = (templateId: string) => `thiep-draft:${templateId}`;
 function formatWhen(value: string) {
   const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/);
   return m ? `${m[4]} · ${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+// A radiogroup in the same style as the colour and font pickers; one option is always checked.
+function ChoiceGroup<T>({
+  label,
+  name,
+  options,
+  value,
+  onChange,
+  text,
+}: {
+  label: string;
+  name: string;
+  options: readonly T[];
+  value: T;
+  onChange: (value: T) => void;
+  text: (option: T) => string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap items-center gap-2">
+      <span aria-hidden="true" className="w-24 text-sm font-medium">{label}</span>
+      {options.map((o) => (
+        <label key={text(o)} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+          <input type="radio" name={name} checked={value === o} onChange={() => onChange(o)} />
+          {text(o)}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+// The card keeps its exact ratio: content taller than the card is scaled down to fit, never grown or clipped.
+function FitCard({ children, ...props }: ComponentProps<"div">) {
+  const innerRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const inner = innerRef.current;
+    const card = inner?.parentElement;
+    if (!inner || !card) return;
+    const fit = () => {
+      const css = getComputedStyle(card);
+      const room = card.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom);
+      inner.style.transform = inner.offsetHeight > room ? `scale(${room / inner.offsetHeight})` : "";
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(card);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div {...props}>
+      <article ref={innerRef} className="flex w-full shrink-0 flex-col items-center gap-3">
+        {children}
+      </article>
+    </div>
+  );
 }
 
 export default function InvitationEditor({
@@ -69,15 +170,22 @@ export default function InvitationEditor({
   const [backgroundMessage, setBackgroundMessage] = useState<string | null>(null);
 
   const [restored, setRestored] = useState(false);
+  const [ratio, setRatio] = useState<Ratio>(RATIOS[0]);
+  const [quality, setQuality] = useState<Quality>(3);
+  const [format, setFormat] = useState<Format>("png");
+
   const [fullScreen, setFullScreen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const previewRef = useRef<HTMLElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
+  const mapLinkInvalid = !mapLinkValid(details.mapLink);
   const ready =
-    fields.every((f) => details[f.name].trim()) && formatWhen(details.when) !== "";
+    fields.every((f) => details[f.name].trim()) &&
+    formatWhen(details.when) !== "" &&
+    !mapLinkInvalid;
 
   // Restore the draft after mount; reading storage during render would not match the server HTML.
   /* eslint-disable react-hooks/set-state-in-effect -- syncing from an external system (localStorage) on mount */
@@ -159,19 +267,27 @@ export default function InvitationEditor({
     if (!error) setBackground(URL.createObjectURL(file));
   };
 
-  // Exports the on-screen preview; an integer pixel ratio keeps the PNG at least 1080 px wide.
-  const savePng = async () => {
+  // Exports the on-screen preview, already in the chosen ratio; 2x is 1080 px wide, 3x is 1620 px.
+  const save = async () => {
     const node = previewRef.current;
     if (!node) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const pixelRatio = Math.max(1, Math.ceil(PNG_MIN_WIDTH / (node.offsetWidth || PNG_MIN_WIDTH)));
-      const dataUrl = await toPng(node, { pixelRatio });
+      const pixelRatio = exportPixelRatio(quality, node.getBoundingClientRect().width);
+      let href: string;
+      if (format === "pdf") {
+        const dataUrl = await toJpeg(node, { pixelRatio, quality: 0.95, backgroundColor: "#ffffff" });
+        const jpeg = Uint8Array.from(atob(dataUrl.split(",")[1]), (c) => c.charCodeAt(0));
+        href = URL.createObjectURL(new Blob([jpegToPdf(jpeg) as BlobPart], { type: "application/pdf" }));
+      } else {
+        href = await toPng(node, { pixelRatio });
+      }
       const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = invitationFileName(details.bride, details.groom);
+      a.href = href;
+      a.download = invitationFileName(details.bride, details.groom, format);
       a.click();
+      if (format === "pdf") URL.revokeObjectURL(href);
     } catch {
       setSaveError("Không tạo được ảnh thiệp, vui lòng thử lại");
     } finally {
@@ -184,6 +300,12 @@ export default function InvitationEditor({
     <div className={look.body}>
       {look.ornament}
       <p className="text-sm uppercase tracking-wide text-neutral-500">Mẫu: {template.name}</p>
+      {(details.groomParents.trim() || details.brideParents.trim()) && (
+        <div className="flex flex-col gap-1 text-sm">
+          {details.groomParents.trim() && <p>Nhà trai: {details.groomParents.trim()}</p>}
+          {details.brideParents.trim() && <p>Nhà gái: {details.brideParents.trim()}</p>}
+        </div>
+      )}
       <p className="text-sm">Trân trọng báo tin lễ thành hôn của</p>
       <p className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
         <span>{details.bride || "Cô dâu"}</span>
@@ -191,7 +313,12 @@ export default function InvitationEditor({
         <span>{details.groom || "Chú rể"}</span>
       </p>
       <p>{formatWhen(details.when) || "Ngày giờ"}</p>
+      {details.lunarDate.trim() && <p>Âm lịch: {details.lunarDate.trim()}</p>}
       <p>{details.venue || "Địa điểm"}</p>
+      {details.dressCode.trim() && <p>Trang phục: {details.dressCode.trim()}</p>}
+      {details.mapLink.trim() && !mapLinkInvalid && (
+        <p className="break-all text-sm">Bản đồ: {details.mapLink.trim()}</p>
+      )}
       {details.message && <p className="whitespace-pre-line italic">{details.message}</p>}
     </div>
   );
@@ -205,9 +332,11 @@ export default function InvitationEditor({
       : undefined,
     backgroundSize: background ? "cover" : undefined,
     backgroundPosition: background ? "center" : undefined,
+    aspectRatio: `${ratio.width} / ${ratio.height}`,
   } as CSSProperties;
-  // The template's card has an opaque background colour, so the PNG is opaque rather than transparent.
-  const previewClass = look.card;
+  // overflow-hidden keeps the exact ratio; FitCard scales long content down so nothing is cut off.
+  // The template card has an opaque background colour, so the export is opaque rather than transparent.
+  const previewClass = `${look.card} flex flex-col items-center justify-center overflow-hidden`;
 
   // Trim overflow from the inserted text (before the caret), never from the message's end.
   function limitMessage(el: HTMLTextAreaElement) {
@@ -245,6 +374,33 @@ export default function InvitationEditor({
               {invalid && (
                 <p id={`${id}-error`} className="text-sm text-red-600">
                   {f.error}
+                </p>
+              )}
+            </div>
+          );
+        })}
+        {optionalFields.map((f) => {
+          const id = `f-${f.name}`;
+          const invalid = f.name === "mapLink" && touched.mapLink && mapLinkInvalid;
+          return (
+            <div key={f.name} className="flex flex-col gap-1">
+              <label htmlFor={id} className="font-medium">
+                {f.label}
+              </label>
+              <input
+                id={id}
+                type="text"
+                inputMode={f.type === "url" ? "url" : undefined}
+                value={details[f.name]}
+                onChange={(e) => set(f.name, e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, [f.name]: true }))}
+                aria-invalid={invalid || undefined}
+                aria-describedby={invalid ? `${id}-error` : undefined}
+                className="rounded border border-neutral-300 px-3 py-2 aria-invalid:border-red-600"
+              />
+              {invalid && (
+                <p id={`${id}-error`} className="text-sm text-red-600">
+                  {MAP_LINK_ERROR}
                 </p>
               )}
             </div>
@@ -345,15 +501,21 @@ export default function InvitationEditor({
       </form>
 
       <div className="flex flex-col gap-3">
-        <section
+        <FitCard
           ref={previewRef}
+          role="region"
           aria-label="Xem trước thiệp"
           data-template={template.id}
           style={previewStyle}
           className={previewClass}
         >
           {previewContent}
-        </section>
+        </FitCard>
+        <div className="flex flex-col gap-2 rounded border border-neutral-200 p-3">
+          <ChoiceGroup label="Tỉ lệ khung" name="ratio" options={RATIOS} value={ratio} onChange={setRatio} text={(r) => r.label} />
+          <ChoiceGroup label="Chất lượng" name="quality" options={QUALITIES} value={quality} onChange={setQuality} text={(q) => `${q}x`} />
+          <ChoiceGroup label="Định dạng" name="format" options={FORMATS} value={format} onChange={setFormat} text={(f) => f.toUpperCase()} />
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             ref={openButtonRef}
@@ -366,7 +528,7 @@ export default function InvitationEditor({
           <button
             type="button"
             disabled={!ready || saving}
-            onClick={savePng}
+            onClick={save}
             aria-describedby={ready ? undefined : "download-hint"}
             className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
           >
@@ -400,9 +562,9 @@ export default function InvitationEditor({
           >
             Đóng
           </button>
-          <div style={previewStyle} className={`${previewClass} my-auto w-full max-w-3xl text-lg`}>
+          <FitCard style={previewStyle} className={`${previewClass} my-auto w-full shrink-0 max-w-3xl text-lg`}>
             {previewContent}
-          </div>
+          </FitCard>
         </div>
       )}
     </div>
