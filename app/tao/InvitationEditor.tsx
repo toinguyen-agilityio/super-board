@@ -46,6 +46,9 @@ const looks = {
 
 const empty: Details = { bride: "", groom: "", when: "", venue: "", message: "" };
 
+// One draft per template; the background is a blob URL, so it is not saved.
+const draftKey = (templateId: string) => `thiep-draft:${templateId}`;
+
 // "2026-12-20T18:00" → "18:00 · 20/12/2026", read as typed (no timezone shift).
 function formatWhen(value: string) {
   const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/);
@@ -65,6 +68,7 @@ export default function InvitationEditor({
   const [background, setBackground] = useState<string | null>(null);
   const [backgroundMessage, setBackgroundMessage] = useState<string | null>(null);
 
+  const [restored, setRestored] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -74,6 +78,54 @@ export default function InvitationEditor({
 
   const ready =
     fields.every((f) => details[f.name].trim()) && formatWhen(details.when) !== "";
+
+  // Restore the draft after mount; reading storage during render would not match the server HTML.
+  /* eslint-disable react-hooks/set-state-in-effect -- syncing from an external system (localStorage) on mount */
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(draftKey(template.id)) ?? "null");
+      if (saved && typeof saved === "object") {
+        const restoredDetails = { ...empty };
+        for (const key of Object.keys(empty) as (keyof Details)[]) {
+          if (typeof saved.details?.[key] === "string") restoredDetails[key] = saved.details[key];
+        }
+        setDetails(restoredDetails);
+        setPalette(palettes.find((p) => p.id === saved.palette) ?? null);
+        setFont(fonts.find((f) => f.id === saved.font) ?? null);
+      }
+    } catch {
+      // Blocked storage or a corrupt draft: start empty.
+    }
+    setRestored(true);
+  }, [template.id]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Save after every change, but only once the restore ran so it cannot overwrite the draft with empty values.
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      localStorage.setItem(
+        draftKey(template.id),
+        JSON.stringify({ details, palette: palette?.id, font: font?.id }),
+      );
+    } catch {
+      // Blocked or full storage: the editor works without saving.
+    }
+  }, [restored, template.id, details, palette, font]);
+
+  const startOver = () => {
+    try {
+      localStorage.removeItem(draftKey(template.id));
+    } catch {
+      // Nothing to clear if storage is blocked.
+    }
+    setDetails(empty);
+    setTouched({});
+    setPalette(null);
+    setFont(null);
+    setBackground(null);
+    setBackgroundMessage(null);
+  };
 
   // Full screen: focus the close button, Esc closes, focus goes back to "Xem trước".
   useEffect(() => {
@@ -283,6 +335,13 @@ export default function InvitationEditor({
             </button>
           </div>
         </fieldset>
+        <button
+          type="button"
+          onClick={startOver}
+          className="self-start rounded border border-neutral-300 px-3 py-1 text-sm"
+        >
+          Làm lại từ đầu
+        </button>
       </form>
 
       <div className="flex flex-col gap-3">
