@@ -26,7 +26,44 @@ const fields = [
   { name: "venue", label: "Địa điểm", type: "text", error: "Vui lòng nhập địa điểm" },
 ] as const;
 
-type Details = Record<(typeof fields)[number]["name"] | "message", string>;
+const optionalFields = [
+  { name: "groomParents", label: "Phụ huynh nhà trai", type: "text" },
+  { name: "brideParents", label: "Phụ huynh nhà gái", type: "text" },
+  { name: "lunarDate", label: "Ngày âm lịch", type: "text" },
+  { name: "dressCode", label: "Trang phục", type: "text" },
+  { name: "mapLink", label: "Liên kết bản đồ", type: "url" },
+] as const;
+
+type Details = Record<
+  (typeof fields)[number]["name"] | (typeof optionalFields)[number]["name"] | "message",
+  string
+>;
+
+const empty: Details = {
+  bride: "",
+  groom: "",
+  when: "",
+  venue: "",
+  message: "",
+  groomParents: "",
+  brideParents: "",
+  lunarDate: "",
+  dressCode: "",
+  mapLink: "",
+};
+
+const MAP_LINK_ERROR = "Liên kết bản đồ không hợp lệ";
+
+// An empty map link is fine; otherwise it must be an http(s) URL.
+function mapLinkValid(value: string) {
+  const v = value.trim();
+  if (!v) return true;
+  try {
+    return ["http:", "https:"].includes(new URL(v).protocol);
+  } catch {
+    return false;
+  }
+}
 
 // Each template's own card, layout and ornament; mirrors its thumbnail in public/templates.
 const looks = {
@@ -52,8 +89,6 @@ const looks = {
     ornament: <hr data-ornament="duong-ke" aria-hidden="true" className="w-12 border-t-2 border-neutral-700" />,
   },
 } as const;
-
-const empty: Details = { bride: "", groom: "", when: "", venue: "", message: "" };
 
 // "2026-12-20T18:00" → "18:00 · 20/12/2026", read as typed (no timezone shift).
 function formatWhen(value: string) {
@@ -142,8 +177,11 @@ export default function InvitationEditor({
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
+  const mapLinkInvalid = !mapLinkValid(details.mapLink);
   const ready =
-    fields.every((f) => details[f.name].trim()) && formatWhen(details.when) !== "";
+    fields.every((f) => details[f.name].trim()) &&
+    formatWhen(details.when) !== "" &&
+    !mapLinkInvalid;
 
   // Full screen: focus the close button, Esc closes, focus goes back to "Xem trước".
   useEffect(() => {
@@ -210,6 +248,12 @@ export default function InvitationEditor({
     <div className={look.body}>
       {look.ornament}
       <p className="text-sm uppercase tracking-wide text-neutral-500">Mẫu: {template.name}</p>
+      {(details.groomParents.trim() || details.brideParents.trim()) && (
+        <div className="flex flex-col gap-1 text-sm">
+          {details.groomParents.trim() && <p>Nhà trai: {details.groomParents.trim()}</p>}
+          {details.brideParents.trim() && <p>Nhà gái: {details.brideParents.trim()}</p>}
+        </div>
+      )}
       <p className="text-sm">Trân trọng báo tin lễ thành hôn của</p>
       <p className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
         <span>{details.bride || "Cô dâu"}</span>
@@ -217,7 +261,12 @@ export default function InvitationEditor({
         <span>{details.groom || "Chú rể"}</span>
       </p>
       <p>{formatWhen(details.when) || "Ngày giờ"}</p>
+      {details.lunarDate.trim() && <p>Âm lịch: {details.lunarDate.trim()}</p>}
       <p>{details.venue || "Địa điểm"}</p>
+      {details.dressCode.trim() && <p>Trang phục: {details.dressCode.trim()}</p>}
+      {details.mapLink.trim() && !mapLinkInvalid && (
+        <p className="break-all text-sm">Bản đồ: {details.mapLink.trim()}</p>
+      )}
       {details.message && <p className="whitespace-pre-line italic">{details.message}</p>}
     </div>
   );
@@ -273,6 +322,33 @@ export default function InvitationEditor({
               {invalid && (
                 <p id={`${id}-error`} className="text-sm text-red-600">
                   {f.error}
+                </p>
+              )}
+            </div>
+          );
+        })}
+        {optionalFields.map((f) => {
+          const id = `f-${f.name}`;
+          const invalid = f.name === "mapLink" && touched.mapLink && mapLinkInvalid;
+          return (
+            <div key={f.name} className="flex flex-col gap-1">
+              <label htmlFor={id} className="font-medium">
+                {f.label}
+              </label>
+              <input
+                id={id}
+                type="text"
+                inputMode={f.type === "url" ? "url" : undefined}
+                value={details[f.name]}
+                onChange={(e) => set(f.name, e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, [f.name]: true }))}
+                aria-invalid={invalid || undefined}
+                aria-describedby={invalid ? `${id}-error` : undefined}
+                className="rounded border border-neutral-300 px-3 py-2 aria-invalid:border-red-600"
+              />
+              {invalid && (
+                <p id={`${id}-error`} className="text-sm text-red-600">
+                  {MAP_LINK_ERROR}
                 </p>
               )}
             </div>
