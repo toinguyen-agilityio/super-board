@@ -68,14 +68,14 @@ function mapLinkValid(value: string) {
 // Each template's own card, layout and ornament; mirrors its thumbnail in public/templates.
 const looks = {
   "co-dien": {
-    card: "border-4 border-[#7f1d1d] bg-[#fef3c7] p-3",
+    card: "border-4 border-[#7f1d1d] bg-[#fef3c7] p-3 text-neutral-900",
     body: "flex flex-col items-center gap-3 border border-[#7f1d1d] p-6 text-center",
     ornament: (
       <div data-ornament="vong-tron" aria-hidden="true" className="size-14 rounded-full border-[3px] border-[#7f1d1d]" />
     ),
   },
   "hoa-dao": {
-    card: "rounded-3xl border-2 border-[#db2777] bg-[#fdf2f8] p-8",
+    card: "rounded-3xl border-2 border-[#db2777] bg-[#fdf2f8] p-8 text-neutral-900",
     body: "flex flex-col items-center gap-3 text-center",
     ornament: (
       <div data-ornament="hoa-dao" aria-hidden="true" className="text-3xl tracking-[0.5em] text-[#db2777]">
@@ -84,7 +84,7 @@ const looks = {
     ),
   },
   "toi-gian": {
-    card: "border border-neutral-400 bg-[#fafafa] p-10",
+    card: "border border-neutral-400 bg-[#fafafa] p-10 text-neutral-900",
     body: "flex flex-col items-start gap-3 text-left",
     ornament: <hr data-ornament="duong-ke" aria-hidden="true" className="w-12 border-t-2 border-neutral-700" />,
   },
@@ -119,7 +119,7 @@ function ChoiceGroup<T>({
     <div role="radiogroup" aria-label={label} className="flex flex-wrap items-center gap-2">
       <span aria-hidden="true" className="w-24 text-sm font-medium">{label}</span>
       {options.map((o) => (
-        <label key={text(o)} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+        <label key={text(o)} className="flex items-center gap-2 rounded border border-neutral-300 dark:border-neutral-700 px-2 py-1 text-sm has-checked:border-neutral-900 dark:has-checked:border-neutral-100">
           <input type="radio" name={name} checked={value === o} onChange={() => onChange(o)} />
           {text(o)}
         </label>
@@ -369,10 +369,10 @@ export default function InvitationEditor({
                 onBlur={() => setTouched((t) => ({ ...t, [f.name]: true }))}
                 aria-invalid={invalid || undefined}
                 aria-describedby={invalid ? `${id}-error` : undefined}
-                className="rounded border border-neutral-300 px-3 py-2 aria-invalid:border-red-600"
+                className="rounded border border-neutral-300 dark:border-neutral-700 px-3 py-2 aria-invalid:border-red-600"
               />
               {invalid && (
-                <p id={`${id}-error`} className="text-sm text-red-600">
+                <p id={`${id}-error`} className="text-sm text-red-600 dark:text-red-400">
                   {f.error}
                 </p>
               )}
@@ -396,10 +396,10 @@ export default function InvitationEditor({
                 onBlur={() => setTouched((t) => ({ ...t, [f.name]: true }))}
                 aria-invalid={invalid || undefined}
                 aria-describedby={invalid ? `${id}-error` : undefined}
-                className="rounded border border-neutral-300 px-3 py-2 aria-invalid:border-red-600"
+                className="rounded border border-neutral-300 dark:border-neutral-700 px-3 py-2 aria-invalid:border-red-600"
               />
               {invalid && (
-                <p id={`${id}-error`} className="text-sm text-red-600">
+                <p id={`${id}-error`} className="text-sm text-red-600 dark:text-red-400">
                   {MAP_LINK_ERROR}
                 </p>
               )}
@@ -421,18 +421,18 @@ export default function InvitationEditor({
             }}
             onCompositionEnd={(e) => limitMessage(e.currentTarget)}
             aria-describedby="f-message-count"
-            className="rounded border border-neutral-300 px-3 py-2"
+            className="rounded border border-neutral-300 dark:border-neutral-700 px-3 py-2"
           />
-          <p id="f-message-count" className="text-sm text-neutral-600" aria-live="polite">
+          <p id="f-message-count" className="text-sm text-neutral-600 dark:text-neutral-400" aria-live="polite">
             Còn {Math.max(0, MESSAGE_MAX - countGraphemes(details.message))} ký tự
           </p>
         </div>
 
-        <fieldset className="flex flex-col gap-4 rounded border border-neutral-200 p-4">
+        <fieldset className="flex flex-col gap-4 rounded border border-neutral-200 dark:border-neutral-800 p-4">
           <legend className="px-1 font-medium">Tuỳ chỉnh thiệp</legend>
           <div role="radiogroup" aria-label="Bảng màu" className="flex flex-wrap gap-2">
             {palettes.map((p) => (
-              <label key={p.id} className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900">
+              <label key={p.id} className="flex items-center gap-2 rounded border border-neutral-300 dark:border-neutral-700 px-2 py-1 text-sm has-checked:border-neutral-900 dark:has-checked:border-neutral-100">
                 <input
                   type="radio"
                   name="palette"
@@ -448,7 +448,7 @@ export default function InvitationEditor({
             {fonts.map((f) => (
               <label
                 key={f.id}
-                className="flex items-center gap-2 rounded border border-neutral-300 px-2 py-1 text-sm has-checked:border-neutral-900"
+                className="flex items-center gap-2 rounded border border-neutral-300 dark:border-neutral-700 px-2 py-1 text-sm has-checked:border-neutral-900 dark:has-checked:border-neutral-100"
                 style={{ fontFamily: `var(${f.variable}), sans-serif` }}
               >
                 <input
@@ -474,7 +474,7 @@ export default function InvitationEditor({
               className="text-sm"
             />
             {backgroundMessage && (
-              <p id="f-background-error" role="alert" className="text-sm text-red-600">
+              <p id="f-background-error" role="alert" className="text-sm text-red-600 dark:text-red-400">
                 {backgroundMessage}
               </p>
             )}
@@ -485,7 +485,7 @@ export default function InvitationEditor({
                 setBackground(null);
                 setBackgroundMessage(null);
               }}
-              className="self-start rounded border border-neutral-300 px-3 py-1 text-sm disabled:opacity-50"
+              className="self-start rounded border border-neutral-300 dark:border-neutral-700 px-3 py-1 text-sm disabled:opacity-50"
             >
               Xoá ảnh nền
             </button>
@@ -494,7 +494,7 @@ export default function InvitationEditor({
         <button
           type="button"
           onClick={startOver}
-          className="self-start rounded border border-neutral-300 px-3 py-1 text-sm"
+          className="self-start rounded border border-neutral-300 dark:border-neutral-700 px-3 py-1 text-sm"
         >
           Làm lại từ đầu
         </button>
@@ -511,7 +511,7 @@ export default function InvitationEditor({
         >
           {previewContent}
         </FitCard>
-        <div className="flex flex-col gap-2 rounded border border-neutral-200 p-3">
+        <div className="flex flex-col gap-2 rounded border border-neutral-200 dark:border-neutral-800 p-3">
           <ChoiceGroup label="Tỉ lệ khung" name="ratio" options={RATIOS} value={ratio} onChange={setRatio} text={(r) => r.label} />
           <ChoiceGroup label="Chất lượng" name="quality" options={QUALITIES} value={quality} onChange={setQuality} text={(q) => `${q}x`} />
           <ChoiceGroup label="Định dạng" name="format" options={FORMATS} value={format} onChange={setFormat} text={(f) => f.toUpperCase()} />
@@ -521,7 +521,7 @@ export default function InvitationEditor({
             ref={openButtonRef}
             type="button"
             onClick={() => setFullScreen(true)}
-            className="rounded border border-neutral-300 px-4 py-2"
+            className="rounded border border-neutral-300 dark:border-neutral-700 px-4 py-2"
           >
             Xem trước
           </button>
@@ -530,18 +530,18 @@ export default function InvitationEditor({
             disabled={!ready || saving}
             onClick={save}
             aria-describedby={ready ? undefined : "download-hint"}
-            className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
+            className="rounded bg-neutral-900 px-4 py-2 text-white dark:bg-neutral-100 dark:text-neutral-900 disabled:opacity-50"
           >
             Tải về
           </button>
         </div>
         {!ready && (
-          <p id="download-hint" className="text-sm text-neutral-600">
+          <p id="download-hint" className="text-sm text-neutral-600 dark:text-neutral-400">
             Hãy điền đủ tên cô dâu, tên chú rể, ngày giờ và địa điểm để tải thiệp
           </p>
         )}
         {saveError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
             {saveError}
           </p>
         )}
@@ -552,13 +552,13 @@ export default function InvitationEditor({
           role="dialog"
           aria-modal="true"
           aria-label="Xem trước toàn màn hình"
-          className="fixed inset-0 z-50 flex flex-col items-center gap-4 overflow-auto bg-white p-6"
+          className="fixed inset-0 z-50 flex flex-col items-center gap-4 overflow-auto bg-white p-6 dark:bg-neutral-950"
         >
           <button
             ref={closeButtonRef}
             type="button"
             onClick={() => setFullScreen(false)}
-            className="self-end rounded border border-neutral-300 px-4 py-2"
+            className="self-end rounded border border-neutral-300 dark:border-neutral-700 px-4 py-2"
           >
             Đóng
           </button>
