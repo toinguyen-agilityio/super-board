@@ -11,7 +11,7 @@ export default function Home() {
           <li key={t.id}>
             <Link
               href={`/tao?mau=${t.id}`}
-              className="block rounded-lg border border-neutral-200 p-3 hover:shadow-md"
+              className="block rounded-lg border border-neutral-200 p-3 dark:border-neutral-800 hover:shadow-md"
             >
               <Image
                 src={t.thumbnail}
